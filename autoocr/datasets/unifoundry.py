@@ -54,16 +54,36 @@ def shuffled_iter():
             yield np_set[np_file]
 
 
+def shuffled_batch_iter(batch_size):
+    it = shuffled_iter()
+    while True:
+        arr = np.empty((batch_size, 16, 16, 1), dtype=bool)
+        for b in range(batch_size):
+            arr[b, ...] = next(it)[..., np.newaxis]
+        yield arr
+
+
 def display():
-    img_gen = shuffled_iter()
+    img_gen = shuffled_batch_iter(64)
+
+    arr = np.empty((1, 16 * 8, 16 * 8, 1))
 
     def img_loop(frame, id):
-        frm = next(img_gen)
-        frm.astype(np.int)
-        frame[:] = frm * 255
-        time.sleep(.03)
+        ar = next(img_gen)
+        ar1 = []
+        for i in range(8):
+            ar1.append(np.concatenate([ar[x] for x in range(i * 8, i * 8 + 8)], axis=0))
+        ar2 = np.concatenate(ar1, axis=1)
 
-    VideoHandlerThread(video_source=np.zeros((16, 16)), callbacks=[img_loop]).display()
+        arr[:] = ar2
+        return arr
+
+    v = VideoHandlerThread(video_source=arr, callbacks=display_callbacks + [img_loop])
+    s = SubscriberWindows(video_sources=[arr], window_names=[str(x) for x in range(1)])
+
+    v.start()
+    s.loop()
+    v.join()
 
 
 if __name__ == "__main__":
