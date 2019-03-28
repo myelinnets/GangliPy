@@ -60,7 +60,9 @@ class _KWinnersBoostFunc(autograd.Function):
         mask_active = torch.ByteTensor(tensor.shape).zero_()
         mask_active[torch.arange(batch_size).unsqueeze(1), active_indices] = 1
         tensor[~mask_active] = 0
-        tensor[mask_active] = 1
+        tensor = torch.where(tensor > 0, torch.ones_like(tensor), torch.zeros_like(tensor))
+        if torch.sum(tensor).item() == 0:
+            tensor[mask_active] = 1
         ctx.save_for_backward(tensor, boost_tensor, boost_percent)
         boost_tensor[mask_active] = 0
 
