@@ -39,6 +39,7 @@ class ConvolutionalEncoder(nn.Module):  # NOSONAR
         if self.displayable:
             self.display_list = [np.empty((16, 16)),
                                  np.empty((100, 100)),
+                                 np.ones((100, 100)),
                                  np.empty((16, 16)), ]
 
     def _display_video_threads(self):
@@ -73,15 +74,19 @@ class ConvolutionalEncoder(nn.Module):  # NOSONAR
         x = self.fc(x)
 
         x = self.booster(x)
+        x_max = torch.max(self.booster.boost_tensor.data)
+        x_min = torch.min(self.booster.boost_tensor.data)
+        x_display = ((self.booster.boost_tensor.data - x_min) * (1.0 / (x_max - x_min))).view(100, 100).cpu().numpy()
+        if self.displayable: self.display_list[1][...] = x_display*1.0
+
         x_max = torch.max(x.data)
         x_min = torch.min(x.data)
         x_display = ((x.data - x_min) * (1.0 / (x_max - x_min))).view(100, 100).cpu().numpy()
-
-        if self.displayable: self.display_list[1][...] = x_display*1.0
+        if self.displayable: self.display_list[2][...] = x_display * 1.0
 
         # x = dense_to_sparse(x) Todo: implement convTranspose on sparse for 5-10x speedup here.
         x = self.conv(x)
-        if self.displayable: self.display_list[2][...] = x.view(16, 16).data.cpu().numpy()
+        if self.displayable: self.display_list[3][...] = x.view(16, 16).data.cpu().numpy()
         return x
 
 
