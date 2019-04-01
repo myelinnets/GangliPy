@@ -77,7 +77,7 @@ class ConvolutionalEncoder(nn.Module):  # NOSONAR
         x_max = torch.max(self.booster.boost_tensor.data)
         x_min = torch.min(self.booster.boost_tensor.data)
         x_display = ((self.booster.boost_tensor.data - x_min) * (1.0 / (x_max - x_min))).view(100, 100).cpu().numpy()
-        if self.displayable: self.display_list[1][...] = x_display*1.0
+        if self.displayable: self.display_list[1][...] = x_display * 1.0
 
         x_max = torch.max(x.data)
         x_min = torch.min(x.data)
@@ -88,6 +88,37 @@ class ConvolutionalEncoder(nn.Module):  # NOSONAR
         x = self.conv(x)
         if self.displayable: self.display_list[3][...] = x.view(16, 16).data.cpu().numpy()
         return x
+
+    def forward_one_hot(self, one_hot, normalize=True):
+        if isinstance(one_hot, int):
+            one_hot = self.get_one_hot(one_hot)
+        if not self.displayable:
+            raise NotImplementedError("Must be marked displayable for forward_one_hot.")
+        self.display_list[0][...] = np.ones((16, 16)) * .5
+        self.display_list[1][...] = np.ones((100, 100)) * .5
+
+        x_max = torch.max(one_hot.data)
+        x_min = torch.min(one_hot.data)
+        x_display = ((one_hot.data - x_min) * (1.0 / (x_max - x_min))).view(100, 100).cpu().numpy()
+        self.display_list[2][...] = x_display * 1.0
+
+        x = self.conv(one_hot)
+
+        if normalize:
+            x_max = torch.max(x.data)
+            x_min = torch.min(x.data)
+            x_display = ((x.data - x_min) * (1.0 / (x_max - x_min))).view(16, 16).cpu().numpy()
+            self.display_list[3][...] = x_display * 1.0
+        else:
+            self.display_list[3][...] = x.view(16, 16).data.cpu().numpy()
+        return x
+
+    def get_one_hot(self, n):
+        t = torch.zeros((1, 10000, 1, 1))
+        t[0, n, 0, 0] = 1
+        if next(self.parameters()).is_cuda:
+            t = t.cuda()
+        return t
 
 
 loss_fn = nn.BCEWithLogitsLoss()
@@ -134,7 +165,29 @@ def train_from_unicode():
     torch.save(model.state_dict(), "AutoOCR.torch")
 
 
+from itertools import cycle
+
+
+def one_hot_display():
+    model = ConvolutionalEncoder(displayable=True)
+    if os.path.isfile('AutoOCR.torch'):
+        model_dict = torch.load('AutoOCR.torch')
+        model_dict.pop('booster.boost_tensor')
+        model.load_state_dict(model_dict)
+
+    model = model.cuda()
+    it = cycle(range(10000))
+
+    def test_display(it):
+        for s in count(0):
+            inp = next(it)
+            with torch.autograd.set_grad_enabled(False):
+                model.forward_one_hot(inp)
+            if stopper:
+                break
+
+    model.display(test_display, it)
+
+
 if __name__ == '__main__':
-
-    train_from_unicode()
-
+    one_hot_display()
