@@ -1,6 +1,6 @@
 # GangliPy
 
-GangliPy is a collection 
+GangliPy is a collection of neural networks evaluated to be the best for certain types of tasks.
 
 # In Progress
 
