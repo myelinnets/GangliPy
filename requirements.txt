@@ -1,1 +1,5 @@
--e .
+requests==2.18.4[datasets]
+CVPubSubs==0.6.4
+torch==1.0.1.post2
+numpy==1.16.1
+Pillow==5.4.1[datasets]
