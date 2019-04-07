@@ -6,7 +6,7 @@ from torch import autograd
 from threading import Thread
 import torch.optim as optim
 import os
-from autoocr.otherlib.kwinners import KWinnersTakeAll, KWinnersBoost
+from autoocr.otherlib.sparse_variational_pooler import SparseVariationalPooler
 
 if False:
     from typing import Any
@@ -33,7 +33,7 @@ class ConvolutionalEncoder(nn.Module):  # NOSONAR
     def __init__(self, displayable=False):
         super(ConvolutionalEncoder, self).__init__()
         self.fc = nn.Conv2d(1, 10000, kernel_size=(16, 16))
-        self.booster = KWinnersBoost()
+        self.booster = SparseVariationalPooler()
         self.conv = nn.ConvTranspose2d(10000, 1, kernel_size=(16, 16))
         self.displayable = displayable
         if self.displayable:
@@ -190,4 +190,4 @@ def one_hot_display():
 
 
 if __name__ == '__main__':
-    one_hot_display()
+    train_from_unicode()
