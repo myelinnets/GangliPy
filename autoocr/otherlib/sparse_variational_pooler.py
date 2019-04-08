@@ -194,12 +194,16 @@ class _KWinnersBoostFunc(autograd.Function):
         other_active[1, :] = rankings[0,1:21,0,0]
         inhibition_tensor = add_self_affectors(inhibition_tensor, top_active, other_active)
 
-        # todo: randomly decrease other dendrites depending on sparse coo density and algo here
-        #desired_max_total_connections = 1000*tensor.shape[1]
-        #conn = inhibition_tensor._values().shape[0]
-        #subtraction = (conn**2) / (conn**2 + desired_max_total_connections*2)
-        #subtraction *= torch.max(torch.abs(inhibition_tensor._values()))
-        #new_vals = torch.min(inhibition_tensor._values() + torch.ones_like(inhibition_tensor._values())*subtraction, 0)
+        # todo: move this out to its own function
+        desired_max_total_connections = 1000*tensor.shape[1]
+        conn = inhibition_tensor._values().shape[0]
+        subtraction = (conn**2) / (conn**2 + desired_max_total_connections*2)
+        subtraction *= torch.max(torch.abs(inhibition_tensor._values()))
+        new_vals = torch.min((inhibition_tensor._values() + torch.ones_like(inhibition_tensor._values())*subtraction), torch.zeros_like(inhibition_tensor._values()))
+        new_nonzeros = new_vals.nonzero()
+        new_vals = new_vals[new_nonzeros[:,0]]
+        new_indices = inhibition_tensor._indices()[:,new_nonzeros[:,0]]
+        inhibition_tensor = torch.sparse_coo_tensor(new_indices, new_vals, inhibition_tensor.shape)
 
 
         boost_tensor = torch.where(tensor > 0, torch.zeros_like(boost_tensor), boost_tensor)
