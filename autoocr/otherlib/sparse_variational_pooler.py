@@ -40,7 +40,7 @@ def add_self_affector(inhibition_tensor, affector_index, affectee_index):
         >>> s1 = torch.sparse_coo_tensor(torch.LongTensor([[0],[0],[1],[1]]),torch.FloatTensor([0.5]),(5,5,5,5))
         >>> affector = torch.LongTensor([[2],[2]])
         >>> affectee = torch.LongTensor([[3],[3]])
-        >>> add_self_affector(s1, affector, affectee)
+        >>> add_self_affectors(s1, affector, affectee)
         tensor(indices=tensor([[0, 2],
                                [0, 2],
                                [1, 3],
@@ -70,6 +70,55 @@ def add_self_affector(inhibition_tensor, affector_index, affectee_index):
         raise RuntimeError("Sparse tensor has duplicate entries.")
 
     inhibition_tensor = torch.sparse_coo_tensor(sparse_indices, sparse_values, sparse_shape)
+    return inhibition_tensor
+
+def add_self_affectors(inhibition_tensor, affector_indices, affectee_indices, affect_value=-0.01):
+    """
+        >>> s1 = torch.sparse_coo_tensor(torch.LongTensor([[0],[0],[1],[1]]),torch.FloatTensor([0.5]),(5,5,5,5))
+        >>> affector = torch.LongTensor([[2,4],[2,3]])
+        >>> affectee = torch.LongTensor([[3,2],[3,1]])
+        >>> add_self_affectors(s1, affector, affectee)
+        tensor(indices=tensor([[0, 2, 4],
+                               [0, 2, 3],
+                               [1, 3, 2],
+                               [1, 3, 1]]),
+               values=tensor([ 0.5000, -0.0100, -0.0100]),
+               size=(5, 5, 5, 5), nnz=3, layout=torch.sparse_coo)
+
+
+        :param tensor: Tensor to have self links applied to.
+        :param sparse_tensor: Sparse tensor representing links of points in tensor to other points in tensor.
+            Rank should be 2x tensor's rank.
+        :return: tensor modified by self links.
+        """
+    for i in range(affector_indices.shape[1]):
+        new_index = torch.cat((affector_indices[:,i:i+1], affectee_indices[:,i:i+1]), 0).type_as(inhibition_tensor._indices())
+        if inhibition_tensor.is_cuda:
+            new_index = new_index.cuda()
+        if inhibition_tensor._indices().shape[1]!=0:
+
+            indices_equality = (inhibition_tensor._indices() == new_index.repeat(1, inhibition_tensor._indices().shape[1]))
+            indices_dim = inhibition_tensor._indices().shape[0]
+            column_check = torch.ones((1,indices_dim))
+            column_sum = torch.mm(column_check,indices_equality.type_as(column_check))
+            found_index = (column_sum == indices_dim).nonzero()
+        else:
+            found_index = []
+
+        sparse_indices = inhibition_tensor._indices()
+        sparse_values = inhibition_tensor._values()
+        sparse_shape = inhibition_tensor.shape
+
+        if len(found_index) == 1:
+            found_index = found_index[0]
+            sparse_values[found_index] += affect_value
+        elif len(found_index) == 0:
+            sparse_indices = torch.cat((sparse_indices, new_index), 1)
+            sparse_values = torch.cat((sparse_values, torch.Tensor([affect_value]).type_as(sparse_values)), 0)
+        else:
+            raise RuntimeError("Sparse tensor has duplicate entries.")
+
+        inhibition_tensor = torch.sparse_coo_tensor(sparse_indices, sparse_values, sparse_shape)
     return inhibition_tensor
 
 
@@ -139,18 +188,23 @@ class _KWinnersBoostFunc(autograd.Function):
         tensor, rankings = _KWinnersBoostFunc.run_k_winners_positive(boosted, sparsity)
         ctx.save_for_backward(tensor)  # must not include pure boost activations
         tensor = _KWinnersBoostFunc.choose_boosted_to_satisfy_minimum(tensor, boost_tensor, sparsity)
-        if len(rankings) > 1:
-            top_active = tensor[rankings[0]]
-            top_active = top_active.repeat(1, len(rankings.shape) - 1)
-            other_active = tensor[rankings[1:]]
-            for t, o in zip(top_active, other_active):
-                inhibition_tensor = add_self_affector(inhibition_tensor, t, o)
+        top_active = torch.zeros((len(tensor.shape), 20))
+        top_active[1,:] = rankings[0,0:1,0,0]
+        other_active = torch.zeros((len(tensor.shape), 20))
+        other_active[1, :] = rankings[0,1:21,0,0]
+        inhibition_tensor = add_self_affectors(inhibition_tensor, top_active, other_active)
 
         # todo: randomly decrease other dendrites depending on sparse coo density and algo here
+        #desired_max_total_connections = 1000*tensor.shape[1]
+        #conn = inhibition_tensor._values().shape[0]
+        #subtraction = (conn**2) / (conn**2 + desired_max_total_connections*2)
+        #subtraction *= torch.max(torch.abs(inhibition_tensor._values()))
+        #new_vals = torch.min(inhibition_tensor._values() + torch.ones_like(inhibition_tensor._values())*subtraction, 0)
+
 
         boost_tensor = torch.where(tensor > 0, torch.zeros_like(boost_tensor), boost_tensor)
 
-        return tensor, boost_tensor
+        return tensor, boost_tensor, inhibition_tensor
 
 
 class SparseVariationalPooler(nn.Module):
@@ -170,9 +224,10 @@ class SparseVariationalPooler(nn.Module):
         if self.inhibition_tensor is None:
             self.inhibition_tensor = nn.Parameter(torch.sparse_coo_tensor([[]]*len(tensor.shape)*2, [], list(tensor.shape) * 2).cuda())
 
-        tensor, boost_tensor = self.func_apply(tensor,
+        tensor, boost_tensor, inhibition_tensor = self.func_apply(tensor,
                                                sparsity,
                                                (self.boost_tensor, boost_percent, self.boost_method),
                                                self.inhibition_tensor)
         self.boost_tensor = nn.Parameter(boost_tensor)
+        self.inhibition_tensor = nn.Parameter(inhibition_tensor)
         return tensor
