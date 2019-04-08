@@ -30,9 +30,12 @@ def apply_sparse_self_affector(
     :return: tensor modified by self links.
     """
     t_rank = int(len(tensor.shape))
+    if sparse_tensor._values().shape[0] == 0:
+        return tensor
     coo_indices = sparse_tensor._indices()
-    tensor[list(coo_indices[t_rank:])] += tensor[list(coo_indices[:t_rank])] * sparse_tensor._values()
-    return tensor
+    tens = tensor.clone()
+    tens[list(coo_indices[t_rank:])] += tens[list(coo_indices[:t_rank])] * sparse_tensor._values()
+    return tens
 
 
 def add_self_affector(inhibition_tensor, affector_index, affectee_index):
@@ -185,7 +188,7 @@ class _KWinnersBoostFunc(autograd.Function):
                 ):
         boost_tensor, boosted = _KWinnersBoostFunc.run_boosting(tensor, boosting)
         inhibited = apply_sparse_self_affector(boosted, inhibition_tensor)
-        tensor, rankings = _KWinnersBoostFunc.run_k_winners_positive(boosted, sparsity)
+        tensor, rankings = _KWinnersBoostFunc.run_k_winners_positive(inhibited, sparsity)
         ctx.save_for_backward(tensor)  # must not include pure boost activations
         tensor = _KWinnersBoostFunc.choose_boosted_to_satisfy_minimum(tensor, boost_tensor, sparsity)
         top_active = torch.zeros((len(tensor.shape), 20))
@@ -200,6 +203,7 @@ class _KWinnersBoostFunc(autograd.Function):
         subtraction = (conn**2) / (conn**2 + desired_max_total_connections*2)
         subtraction *= torch.max(torch.abs(inhibition_tensor._values()))
         new_vals = torch.min((inhibition_tensor._values() + torch.ones_like(inhibition_tensor._values())*subtraction), torch.zeros_like(inhibition_tensor._values()))
+        new_vals = torch.max(new_vals, torch.ones_like(new_vals)*-1.0)
         new_nonzeros = new_vals.nonzero()
         new_vals = new_vals[new_nonzeros[:,0]]
         new_indices = inhibition_tensor._indices()[:,new_nonzeros[:,0]]
