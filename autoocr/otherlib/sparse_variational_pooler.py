@@ -158,6 +158,10 @@ class _KWinnersBoostFunc(autograd.Function):
         mask_active[torch.arange(batch_size).unsqueeze(1), active_indices] = 1
         tensor[~mask_active] = 0
         tensor = torch.where(tensor > 0, torch.ones_like(tensor), torch.zeros_like(tensor))
+        new_shape = list(tensor.shape)
+        new_shape[1]=max_active
+        t_select = tensor[:, active_indices].view(new_shape).nonzero()
+        argsort = argsort[:, t_select[:,1]]
         return tensor, argsort
 
     @staticmethod
@@ -193,8 +197,13 @@ class _KWinnersBoostFunc(autograd.Function):
         tensor = _KWinnersBoostFunc.choose_boosted_to_satisfy_minimum(tensor, boost_tensor, sparsity)
         top_active = torch.zeros((len(tensor.shape), 20))
         top_active[1,:] = rankings[0,0:1,0,0]
+        max_sparsity = sparsity[1]
+
+        batch_size, embedding_size = tensor.shape[:2]
+        max_active = int(torch.ceil(max_sparsity * embedding_size).item())
         other_active = torch.zeros((len(tensor.shape), 20))
-        other_active[1, :] = rankings[0,1:21,0,0]
+        # todo: fix so this only has neurons that were actually positive
+        other_active[1, :] = rankings[0,max(rankings.shape[1]-20,1):max_active,0,0]
         inhibition_tensor = add_self_affectors(inhibition_tensor, top_active, other_active)
 
         # todo: move this out to its own function
