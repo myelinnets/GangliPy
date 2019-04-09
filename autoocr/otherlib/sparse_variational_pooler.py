@@ -202,12 +202,11 @@ class _KWinnersBoostFunc(autograd.Function):
         batch_size, embedding_size = tensor.shape[:2]
         max_active = int(torch.ceil(max_sparsity * embedding_size).item())
         other_active = torch.zeros((len(tensor.shape), 20))
-        # todo: fix so this only has neurons that were actually positive
         other_active[1, :] = rankings[0,max(rankings.shape[1]-20,1):max_active,0,0]
         inhibition_tensor = add_self_affectors(inhibition_tensor, top_active, other_active)
 
         # todo: move this out to its own function
-        desired_max_total_connections = 1000*tensor.shape[1]
+        desired_max_total_connections = 1000*1000*1000*1000*1000*tensor.shape[1]
         conn = inhibition_tensor._values().shape[0]
         subtraction = (conn**2) / (conn**2 + desired_max_total_connections*2)
         subtraction *= torch.max(torch.abs(inhibition_tensor._values()))
