@@ -38,6 +38,33 @@ def apply_sparse_self_affector(
     return tens
 
 
+def apply_sparse_self_affector_const_val(
+        tensor, adder,
+        sparse_tensor  # type: torch.Tensor
+):
+    """
+    >>> t1 = torch.ones((5,5))
+    >>> s1 = torch.sparse_coo_tensor(torch.LongTensor([[0],[0],[1],[1]]),torch.FloatTensor([0.5]),(5,5,5,5))
+    >>> apply_sparse_self_affector(t1, s1)
+    tensor([[1.0000, 1.0000, 1.0000, 1.0000, 1.0000],
+            [1.0000, 1.5000, 1.0000, 1.0000, 1.0000],
+            [1.0000, 1.0000, 1.0000, 1.0000, 1.0000],
+            [1.0000, 1.0000, 1.0000, 1.0000, 1.0000],
+            [1.0000, 1.0000, 1.0000, 1.0000, 1.0000]])
+
+    :param tensor: Tensor to have self links applied to.
+    :param sparse_tensor: Sparse tensor representing links of points in tensor to other points in tensor.
+        Rank should be 2x tensor's rank.
+    :return: tensor modified by self links.
+    """
+    t_rank = int(len(tensor.shape))
+    if sparse_tensor._values().shape[0] == 0:
+        return tensor
+    coo_indices = sparse_tensor._indices()
+    tens = tensor.clone()
+    tens[list(coo_indices[t_rank:])] += torch.ones_like(tens[list(coo_indices[:t_rank])])*adder
+    return tens
+
 def add_self_affector(inhibition_tensor, affector_index, affectee_index):
     """
         >>> s1 = torch.sparse_coo_tensor(torch.LongTensor([[0],[0],[1],[1]]),torch.FloatTensor([0.5]),(5,5,5,5))
@@ -191,22 +218,22 @@ class _KWinnersBoostFunc(autograd.Function):
                 inhibition_tensor
                 ):
         boost_tensor, boosted = _KWinnersBoostFunc.run_boosting(tensor, boosting)
-        inhibited = apply_sparse_self_affector(boosted, inhibition_tensor)
+        inhibited = apply_sparse_self_affector_const_val(boosted,0.01, inhibition_tensor)
         tensor, rankings = _KWinnersBoostFunc.run_k_winners_positive(inhibited, sparsity)
         ctx.save_for_backward(tensor)  # must not include pure boost activations
         tensor = _KWinnersBoostFunc.choose_boosted_to_satisfy_minimum(tensor, boost_tensor, sparsity)
-        top_active = torch.zeros((len(tensor.shape), 20))
+        top_active = torch.zeros((len(tensor.shape), 50))
         top_active[1,:] = rankings[0,0:1,0,0]
         max_sparsity = sparsity[1]
 
         batch_size, embedding_size = tensor.shape[:2]
         max_active = int(torch.ceil(max_sparsity * embedding_size).item())
-        other_active = torch.zeros((len(tensor.shape), 20))
-        other_active[1, :] = rankings[0,max(rankings.shape[1]-20,1):max_active,0,0]
+        other_active = torch.zeros((len(tensor.shape), 50))
+        other_active[1, :] = rankings[0,max(rankings.shape[1]-150,1):max(rankings.shape[1]-100,1),0,0]
         inhibition_tensor = add_self_affectors(inhibition_tensor, top_active, other_active)
 
         # todo: move this out to its own function
-        desired_max_total_connections = 1000*1000*1000*1000*1000*tensor.shape[1]
+        desired_max_total_connections = 1000*1000*tensor.shape[1]
         conn = inhibition_tensor._values().shape[0]
         subtraction = (conn**2) / (conn**2 + desired_max_total_connections*2)
         subtraction *= torch.max(torch.abs(inhibition_tensor._values()))
@@ -232,7 +259,7 @@ class SparseVariationalPooler(nn.Module):
         self.register_parameter('boost_tensor', None)
         self.register_parameter('inhibition_tensor', None)
 
-    def forward(self, tensor, sparsity=torch.Tensor([0.002, 0.02]), boost_percent=torch.tensor(1e-8)):
+    def forward(self, tensor, sparsity=torch.Tensor([0.002, 0.02]), boost_percent=torch.tensor(1e-9)):
         if boost_percent is None:
             raise ValueError("boost_percent cannot be None.")
         if self.boost_tensor is None:
