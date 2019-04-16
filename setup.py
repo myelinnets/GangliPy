@@ -2,7 +2,7 @@ from io import open
 
 from setuptools import find_packages, setup
 
-with open('autoocr/__init__.py', 'r') as f:
+with open('ganglipy/__init__.py', 'r') as f:
     for line in f:
         if line.startswith('__version__'):
             version = line.strip().split('=')[1].strip(' \'"')
@@ -16,7 +16,7 @@ with open('readme.md', 'r', encoding='utf-8') as f:
 REQUIRES = []
 
 setup(
-    name='autoOCR',
+    name='GangliPy',
     version=version,
     description='',
     long_description=readme,
@@ -24,7 +24,7 @@ setup(
     author_email='josh.miklos@gmail.com',
     maintainer='SimLeek',
     maintainer_email='josh.miklos@gmail.com',
-    url='https://github.com/_/autoOCR',
+    url='https://github.com/SimLeek/GangliPy',
     license='MIT',
 
     keywords=[

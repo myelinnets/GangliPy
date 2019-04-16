@@ -1,15 +1,14 @@
 from torch import nn
 import torch
 import numpy as np
-import math
 from torch import autograd
 from threading import Thread
 import torch.optim as optim
 import os
-from autoocr.otherlib.sparse_variational_pooler import SparseVariationalPooler
+from ganglipy.sparse.sparse_variational_pooler import SparseVariationalPooler
 
 if False:
-    from typing import Any
+    pass
 
 
 def dense_to_sparse(x):
@@ -124,7 +123,7 @@ class ConvolutionalEncoder(nn.Module):  # NOSONAR
 loss_fn = nn.BCEWithLogitsLoss()
 learning_rate = 1.0
 
-from autoocr.datasets import unifoundry as uni
+from ganglipy.datasets import unifoundry as uni
 from itertools import count
 from cvpubsubs.webcam_pub import VideoHandlerThread, display_callbacks
 from cvpubsubs.window_sub import SubscriberWindows
@@ -134,8 +133,8 @@ def train_from_unicode():
     it = uni.shuffled_iter()
 
     model = ConvolutionalEncoder(displayable=True)
-    if os.path.isfile('AutoOCR.torch'):
-        model_dict = torch.load('AutoOCR.torch')
+    if os.path.isfile('ganglipy.torch'):
+        model_dict = torch.load('ganglipy.torch')
         model_dict.pop('booster.boost_tensor')
         model.load_state_dict(model_dict)
 
@@ -162,7 +161,7 @@ def train_from_unicode():
                 break
 
     model.display(train_display, it)
-    torch.save(model.state_dict(), "AutoOCR.torch")
+    torch.save(model.state_dict(), "ganglipy.torch")
 
 
 from itertools import cycle
@@ -170,8 +169,8 @@ from itertools import cycle
 
 def one_hot_display():
     model = ConvolutionalEncoder(displayable=True)
-    if os.path.isfile('AutoOCR.torch'):
-        model_dict = torch.load('AutoOCR.torch')
+    if os.path.isfile('ganglipy.torch'):
+        model_dict = torch.load('ganglipy.torch')
         model_dict.pop('booster.boost_tensor')
         model.load_state_dict(model_dict)
 
