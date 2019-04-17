@@ -4,6 +4,7 @@ GangliPy is a collection of neural networks evaluated to be the best for certain
 
 # In Progress
 
+
 ## Auto OCR
 
 The first project here is an attempt to recognize all 60,000 unicode characters using a single hidden layer.
