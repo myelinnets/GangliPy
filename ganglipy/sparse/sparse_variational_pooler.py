@@ -4,9 +4,10 @@
 
 import torch
 from torch import nn
-from ganglipy.sparse.boosting import PercentClosenessBoosting
+from ganglipy.sparse.boosting import PercentClosenessBoosting, boost, boost_to_min_sparsity
 from ganglipy.sparse.lateral_inhibition import apply_sparse_self_affector_const_val, add_self_affectors
 from ganglipy.sparse.kwinners_boosted import _KWinnersBoostFunc
+from ganglipy.sparse.kwinners import k_winners_positive
 
 
 class _KWinnersInhibitFunc(_KWinnersBoostFunc):
@@ -26,11 +27,11 @@ class _KWinnersInhibitFunc(_KWinnersBoostFunc):
                 boosting,
                 inhibition_tensor
                 ):
-        boost_tensor, boosted = _KWinnersInhibitFunc.run_boosting(tensor, boosting)
+        boost_tensor, boosted = boost(tensor, *boosting)
         inhibited = apply_sparse_self_affector_const_val(boosted, 0.01, inhibition_tensor)
-        tensor, rankings = _KWinnersInhibitFunc.run_k_winners_positive(inhibited, sparsity)
+        tensor, rankings = k_winners_positive(inhibited, sparsity)
         ctx.save_for_backward(tensor)  # must not include pure boost activations
-        tensor = _KWinnersInhibitFunc.boost_to_min_sparsity(tensor, boost_tensor, sparsity)
+        tensor = boost_to_min_sparsity(tensor, boost_tensor, sparsity)
         top_active = torch.zeros((len(tensor.shape), 50))
         top_active[1, :] = rankings[0, 0:1, 0, 0]
         max_sparsity = sparsity[1]

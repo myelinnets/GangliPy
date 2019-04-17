@@ -100,7 +100,7 @@ def add_self_affectors(inhibition_tensor, affector_indices, affectee_indices, af
         >>> s1 = torch.sparse_coo_tensor(torch.LongTensor([[0],[0],[1],[1]]),torch.FloatTensor([-0.5]),(5,5,5,5))
         >>> affector = torch.LongTensor([[2,4],[2,3]])
         >>> affectee = torch.LongTensor([[3,2],[3,1]])
-        >>> add_self_affectors(s1, affector, affectee)
+        >>> add_self_affectors(s1, affecto2r, affectee)
         tensor(indices=tensor([[0, 2, 4],
                                [0, 2, 3],
                                [1, 3, 2],
@@ -145,3 +145,5 @@ def add_self_affectors(inhibition_tensor, affector_indices, affectee_indices, af
 
         inhibition_tensor = torch.sparse_coo_tensor(sparse_indices, sparse_values, sparse_shape)
     return inhibition_tensor
+
+#  todo: investigate growing and moving self affectors instead of adding

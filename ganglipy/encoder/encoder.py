@@ -6,9 +6,7 @@ from threading import Thread
 import torch.optim as optim
 import os
 from ganglipy.sparse.sparse_variational_pooler import SparseVariationalPooler
-
-if False:
-    pass
+from ganglipy.sparse.kwinners_boosted import KWinnersBoost
 
 
 def dense_to_sparse(x):
