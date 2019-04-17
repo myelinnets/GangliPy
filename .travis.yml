@@ -4,20 +4,20 @@ sudo: true
 cache: pip
 env: CIBW_SKIP='*-win32 *-manylinux1_i686'
 python:
-- '3.5'
-- '3.6'
-- '3.7'
+  - '3.5'
+  - '3.6'
+  - '3.7'
 install:
-- pip install -r requirements.txt -q
+  - pip install -r requirements.txt -q
 script:
-- if [[ $TRAVIS_PYTHON_VERSION == 3.5 ]]; then export CIBW_BUILD='cp35*'; fi
-- if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then export CIBW_BUILD='cp36*'; fi
-- if [[ $TRAVIS_PYTHON_VERSION == 3.7 ]]; then export CIBW_BUILD='cp37*'; fi
-- pip install cibuildwheel==0.10.1
-- cibuildwheel --output-dir wheelhouse
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.5 ]]; then export CIBW_BUILD='cp35*'; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then export CIBW_BUILD='cp36*'; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.7 ]]; then export CIBW_BUILD='cp37*'; fi
+  - pip install cibuildwheel==0.10.1
+  - cibuildwheel --output-dir wheelhouse
 deploy:
   provider: pypi
   user: SimLeek
   skip_existing: true
   password:
-    secure: BeqsnicilMiH3Ixz0xhxxh/haBvFgzywczibd97Ug5VnIOC2LRbssCfZRap2uONU9XGmUBwp9ZGaSBdotW5cweZTLEnG9VFswUw6u+WLLbIj6Yv4Hx6r8x6bcSWq7mBI2KvkjIIDIVI8Ino2VZAVAh5phsTXQ1iwllgqL15aatAcsE4t+xq2qwa0g/QwckAz/akdBxzn6Z31H1raxcTq4g05AfvgY+U0/ukKH9pjOLVLFk1aStKo/aMks4hr/7Mkir+dIBXBa9jqQBca2QXhnYRkPaqOe0Rc1n4Sgdvp8kVSC6QNn5JWL7qRQv+LdL9DmrrACSDOdKPcgVVJKg7nG4JNbRPQXIffMrRKy62Ba16aTNFle6TgFcu/4L7vErc1t1lLEpknuN2egCeTk7PRdoIviFxtxI7v/bP+cTeq+6YaQW/G7wbO/nnTpa9lBTAyll9iqU9yHcLwaAej3CG3Pf9YiU2s2bEN09q5RDGkfDdi9kuuIFZT4Gxww4yn7T6cpgtWveTWJa0d5vfrt2z34qnMTRg19gLhGmG3cb2NTStCTxwyqbTTTu9wQQqhu2WmcaN7i+pLxuTMwy0spjZSiC7P921JT9WtPpeiXj7MPpquu366Cm6yG6eb5kXC9v06/y2/sb+RnEZSSNLXKUE7u/MeWpv9O+OppkLONYnxa5g=
+    secure: Knxd9YZ5M7vstUULGa4DKMR1K+o6YQnFqOp5/2zFBeNqti+NcKvUHmgDGg0edxOgGFk3+pRWXdAzRdJF7siKb0NetDLZ8eeVdkfd3nLICDOKFNRYzyrkb9su7RD6eroFyKKYCtq+ViOal4iZqiO1I//ThC4Yfja0V9hM1B5cqayajqAnFKaT0zP6VbQnps7bstnyJJ2jCSmlTBMUqsYh/+WO2/UQz5yTch8G0ihfS8k7jPR72RpwFHeTqaZUyzr6q3yn1Zqdlc6dZbw7OkeCly0v7fEQsT6P6UaFAdYsqogkxrpR5u04VvmflUOyqSQ+QMvNArfkvHQBhX0Gq4mgGB8s9DV6YK10MEQ4WTGLt4j5wxNf2SvkFv8vtsSHueh7QwEC2cn+HoELlxE1mCc9xzTE11GqMH7VF2AvJlz8XWncniqtnye4ZiNQtdHkX4D9QShynQbrrnXhexTVy1gVMp0/Cvcfczt1TYdn4nm8B3XyOd25HdD5EgFvPT1xCS/dQuUOptx5N0Wpu9moDja6IUbdThd8sPVV5wut1NF9oVtLnFYq+OlJb8obhgMY1k9kwX50xF1pb6vaEnavx64LW0TzF3PrMETdAwTo3aVB+bBlSez1AJKmTK3eQz2FAS0wsyIszVj+y0XRY7T8qXCX0DLeP+avsY4Uvtm9vGsSmbU=
